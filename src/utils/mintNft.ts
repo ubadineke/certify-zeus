@@ -15,15 +15,25 @@ import base58 from 'bs58';
 const RPC_ENDPOINT = 'https://api.devnet.solana.com';
 const umi = createUmi(RPC_ENDPOINT);
 
-let keypair = umi.eddsa.createKeypairFromSecretKey(new Uint8Array(wallet));
-const signer = createSignerFromKeypair(umi, keypair);
-
-umi.use(irysUploader());
-umi.use(signerIdentity(signer));
-umi.use(mplTokenMetadata());
-
 export async function createNftForApp(imagePath: string, name: string, description: string, attributes: any[]) {
   try {
+    //PRESETS
+    if (!process.env.WALLET_KEY) {
+      throw new Error('Missing SIGNER/ Not provided');
+    }
+
+    const base58PrivateKey = process.env.WALLET_KEY.trim();
+    const decodedPrivateKey = base58.decode(base58PrivateKey);
+
+    let keypair = umi.eddsa.createKeypairFromSecretKey(new Uint8Array(decodedPrivateKey));
+    const signer = createSignerFromKeypair(umi, keypair);
+
+    umi.use(irysUploader());
+    umi.use(signerIdentity(signer));
+    umi.use(mplTokenMetadata());
+
+    // ----------------------------------------//-------
+
     // Load and upload image
     const image = await readFile(imagePath);
     const genericFile = createGenericFile(image, name, { contentType: 'image/png' });
@@ -72,28 +82,3 @@ export async function createNftForApp(imagePath: string, name: string, descripti
     throw error;
   }
 }
-
-async function mintNft() {
-  try {
-    const imagePath = './img.png'; // Path to the image file
-    const name = 'My Awesome NFT'; // Name of the NFT
-    const description = 'This is a unique NFT created for demo purposes'; // Description of the NFT
-    const attributes = [
-      { trait_type: 'Background', value: 'Blue' },
-      { trait_type: 'Rarity', value: 'Rare' },
-      { trait_type: 'Edition', value: '1 of 1' },
-    ]; // Array of attributes (metadata)
-
-    const nft = await createNftForApp(imagePath, name, description, attributes);
-
-    console.log('NFT Minted Successfully!');
-    console.log('Mint Address:', nft.mintAddress);
-    console.log('Metadata URI:', nft.metadataUri);
-    console.log('Explorer URL:', nft.explorerUrl);
-    console.log('Transaction URL:', nft.transactionUrl);
-  } catch (error) {
-    console.error('Error minting NFT:', error);
-  }
-}
-
-// mintNft();

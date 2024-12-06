@@ -1,13 +1,9 @@
 import { Controller } from '../decorators';
-// import { pinFileToIPFS } from '../utils/uploadFileToPinata';
 import { Request, Response } from 'express';
-import { createMetadataJson } from '../utils/createMetadataJson';
-import fs from 'fs';
-// import uploadOnchain from '../utils/uploadOnchain';
 import qr from 'qrcode';
 import Qr from '../models/qr.model';
-// import checkNFTExists from '../utils/checkIfNftExists';
 import { createNftForApp } from '../utils/mintNft';
+import checkNFTExistsFromUrl from '../utils/checkIfNftExists';
 
 export default class Product {
   @Controller()
@@ -25,7 +21,6 @@ export default class Product {
 
     //MINT NFT
     const result = await createNftForApp(picture.path, name, description, [{ trait_type: 'S/N', value: sn }]);
-
     const qrCodeDataURI = await qr.toDataURL(JSON.stringify(result.explorerUrl));
     console.log(qrCodeDataURI);
 
@@ -38,6 +33,23 @@ export default class Product {
       transaction: `NFT Minted! Check it out at: ${result.transactionUrl}`,
       nft: `NFT URL! See it at: ${result.explorerUrl}`,
       qrCodeDataURI,
+    });
+  }
+
+  @Controller()
+  public static async verify(req: Request, res: Response) {
+    const { url } = req.body;
+    if (!url) return res.status(400).json('URL not provided');
+    console.log(url);
+
+    const result = await checkNFTExistsFromUrl(url);
+    if (!result) {
+      return res.status(404).json({ message: 'Invalid QR Code' });
+    }
+
+    res.status(200).json({
+      message: 'Verified',
+      nftUrl: url,
     });
   }
 }
